@@ -1,15 +1,103 @@
-
 #import requests
 import os
 #import shutil
 import time
 #from datetime import date
 #import openpyxl
-#import sys
+import sys
 #import datetime
 import json
 
-SDK_info_array = ["", "", "", "", ""]
+SDK_info_array = ["", "", "", "", "", "", ""]
+Package_name = ["TEMP.tar.gz", ""]
+
+def string_search_and_replace(text, substring, replacement, case_sensitive=True):
+    """
+    Searches for a substring in a string and replaces all occurrences with a replacement string.
+
+    Args:
+        text: The string to search in.
+        substring: The substring to search for.
+        replacement: The string to replace the substring with.
+        case_sensitive: Whether to perform a case-sensitive search (default: True).
+
+    Returns:
+        The modified string with all occurrences of the substring replaced.
+    """
+    if not case_sensitive:
+        text = text.lower()
+        substring = substring.lower()
+    new_text = text
+
+    if substring not in text:
+        raise ValueError("release type and branch not match")
+
+    index = new_text.find(substring)
+    new_text = new_text[:index] + replacement + new_text[index + len(substring):]
+    return new_text
+
+def update_tag(release_type, text, substring="QC", remove="-"):
+    if release_type == "E" or release_type == "R":
+        if substring not in text:
+            index = 5
+            new_value = str(int(text[index]) + 1)
+            return text[1:index] + new_value + text[index + 1:]
+        else:
+            index_substring = text.find(substring)
+            index_remove = text.find(remove)
+            return text[1:index_remove]
+    else:
+        raise ValueError("no match branch")
+
+def remove_left_of_second_data(text, second_data="/"):
+    """
+    Finds the second occurrence of second_data from the right and removes all data to the left of it.
+
+    Args:
+        text: The string to modify.
+        second_data: The data to search for (default: "A").
+
+    Returns:
+        The modified string with data to the left of the second occurrence of second_data removed.
+    """
+
+    # Reverse the string
+    reversed_text = text[::-1]
+
+    # Find the first two occurrences of second_data
+    first_index = reversed_text.find(second_data)
+    second_index = reversed_text.find(second_data, first_index + 1)
+
+    # Check if the second occurrence exists
+    if second_index == -1:
+        return text  # Return original text if the second instance is not found
+
+    # Calculate the index to keep in the original string
+    index_to_keep = len(text) - second_index - len(second_data)
+
+    # Return the portion of the string to the right of the second data A
+    return text[index_to_keep:]
+
+def remove_after_word(text, word="raw"):
+    """
+    Removes all data from the right of a specified word in a string, including the word itself.
+
+    Args:
+        text: The string to modify.
+        word: The word to find and remove data after (case-sensitive).
+
+    Returns:
+        The modified string with data after the specified word removed.
+    """
+
+    # Find the index of the word
+    index = text.find(word)
+
+    # Return the portion of the string up to the index of the word + its length
+    if index != -1:
+        return text[:index + len(word)] + "/"  # Include the length of the word
+    else:
+        return text + "/"
 
 def save_json_to_text(json_file, text_file, start_line, end_line):
     """
@@ -155,31 +243,41 @@ def replace_line_data(input_file, output_file, target_line_number, new_data, mat
         print(f"Error: {e}")
 
 def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
-    SDK_stage = SDK_info_array[0]
-    SDK_version = SDK_info_array[1]
-    #SDK_Repo_branch= SDK_info_array[2]
-    SDK_sha= SDK_info_array[2]
-    SDK_size = SDK_info_array[3]
+    SDK_repo = SDK_info_array[0]
+    SDK_release_type = SDK_info_array[1]
+    SDK_tag = SDK_info_array[2]
+    SDK_sha= SDK_info_array[3]
+    SDK_size = SDK_info_array[4]
 
-    if SDK_stage == "E":
+    SDK_https_raw = remove_after_word(SDK_info_array[5])
+#    print(http_raw)
+
+    if SDK_release_type == "E":
         today_date = time.strftime("%Y%m%d")
-        SDK_version = SDK_version + "-build" + today_date
+        SDK_tag = SDK_tag + "-build" + today_date
         SDK_Repo_branch = "dev"
-    elif SDK_stage == "R":
-        SDK_Repo_branch = "main"
+    elif SDK_release_type == "R":
+        if SDK_info_array[6] == "main":
+            SDK_Repo_branch = "main"
+        elif SDK_info_array[6] == "master":
+            SDK_Repo_branch = "master"
+        else:
+            raise ValueError("wrong branch name main/master")
     else:
-        remove_file(temp1_file_path)
-        remove_file(temp2_file_path)
+        raise ValueError("no match branch")
 
     # 4 9 10 11 12
     # 21 26
     # 31
 
-    replace_line_data(temp1_file_path, temp2_file_path, 4, "          \"version\": \"" + SDK_version + "\",")
-    replace_line_data(temp2_file_path, temp1_file_path, 9, "          \"url\": \"https://github.com/ambiot/ambpro2_arduino/raw/" + SDK_Repo_branch + "/Arduino_package/release/ameba_pro2-" + SDK_version + ".tar.gz\",")
-    replace_line_data(temp1_file_path, temp2_file_path, 10, "          \"archiveFileName\": \"ameba_pro2-" + SDK_version + ".tar.gz\",")
+    replace_line_data(temp1_file_path, temp2_file_path, 4, "          \"version\": \"" + SDK_tag + "\",")
+    replace_line_data(temp2_file_path, temp1_file_path, 9, "          \"url\": \"" +SDK_https_raw + SDK_Repo_branch + "/Arduino_package/release/" + SDK_repo + "-" + SDK_tag + ".tar.gz\",")
+    replace_line_data(temp1_file_path, temp2_file_path, 10, "          \"archiveFileName\": \"" + SDK_repo + "-" + SDK_tag + ".tar.gz\",")
     replace_line_data(temp2_file_path, temp1_file_path, 11, "          \"checksum\": \"SHA-256:" + SDK_sha + "\",")
     replace_line_data(temp1_file_path, temp2_file_path, 12, "          \"size\": \"" + SDK_size + "\",")
+
+    Package_name[0] = "./Arduino_package/release/" + Package_name[0]
+    Package_name[1] = "./Arduino_package/release/" + SDK_repo + "-" + SDK_tag + ".tar.gz"
 
 def json_copy_release_info(json_file_path, temp1_file_path, temp2_file_path, SDK_info_array):
     save_json_to_text(json_file_path, temp1_file_path, 13, 46)
@@ -196,36 +294,64 @@ def remove_file(remove_file_path):
     if os.path.exists(remove_file_path):
         os.remove(remove_file_path)
 
-def main():
+def rename_file(old_path, new_path):
+    """
+    Renames a file from the old path to the new path.
+
+    Args:
+        old_path: The current path of the file.
+        new_path: The desired new path of the file.
+
+    Raises:
+        OSError: If renaming fails due to various reasons.
+    """
+    try:
+        os.rename(old_path, new_path)
+    except OSError as e:
+        raise OSError(f"Failed to rename file: {e}") from e
+
+def main(input_1, input_2, input_3, input_4, input_5, input_6, input_7):
     print('......Running Python!!!')
 
-#    json_file_name = sys.argv[5]
-    json_file_name = './Arduino_package/package_realtek_amebapro2_early_index.json'
+    if input_2 == "E":
+        string_search_and_replace(input_6, "dev", "dev")
+    elif input_2 == "R":
+        string_search_and_replace(input_6, input_7, input_7)
+    else:
+        raise ValueError("no match branch")
 
-    open('./Arduino_package/temp1.txt', 'w').close() #Create the file
-    open('./Arduino_package/temp2.txt', 'w').close() #Create the file
+    SDK_info_array[0] = input_1 # ameba_pro2
+    SDK_info_array[1] = input_2 # E
+
+    input_3 = update_tag(input_2, input_3)
+    SDK_info_array[2] = input_3 # ${{ env.LAST_TAG }}
+
+    SDK_info_array[3] = input_4 # ${{ env.PACKAGE_SHA }}
+    SDK_info_array[4] = input_5 # ${{ env.PACKAGE_SIZE }}
+
+    input_6 = string_search_and_replace(input_6, "blob", "raw")
+    SDK_info_array[5] = input_6 # json url
+
+    SDK_info_array[6] = input_7 # main/master
+
+    json_file_name = "." + remove_left_of_second_data(input_6)
+#    print(json_file_name)
+
+    open('./temp1.txt', 'w').close() #Create the file
+    open('./temp2.txt', 'w').close() #Create the file
     json_file_path = os.path.abspath(json_file_name)
-    temp1_file_path = os.path.abspath('./Arduino_package/temp1.txt')
-    temp2_file_path = os.path.abspath('./Arduino_package/temp2.txt')
-
-#    SDK_info_array[0] = sys.argv[1]
-#    SDK_info_array[1] = sys.argv[2]
-#    SDK_info_array[2] = sys.argv[3]
-#    SDK_info_array[3] = sys.argv[4]
-
-    SDK_info_array[0] = "E" # "R"
-    SDK_info_array[1] = "4.0.7zzzzz"
-    #SDK_info_array[2] = "devzzzzz"
-    SDK_info_array[2] = "8cde4d989e56a3708a5801f5f86fc60e179aaad334150045a1694df36e349e74zzzzz"
-    SDK_info_array[3] = "92706326zzzzz"
+    temp1_file_path = os.path.abspath('./temp1.txt')
+    temp2_file_path = os.path.abspath('./temp2.txt')
 
     json_copy_release_info(json_file_path, temp1_file_path, temp2_file_path, SDK_info_array)
 
     remove_file(temp1_file_path)
     remove_file(temp2_file_path)
 
+    rename_file(Package_name[0], Package_name[1])
+
     print('......Done')
 
 if __name__ == "__main__":
-    main()
-#    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+#    main()
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7])
