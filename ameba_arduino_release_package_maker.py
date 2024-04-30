@@ -280,7 +280,7 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
     Package_name[1] = "./Arduino_package/release/" + SDK_repo + "-" + SDK_tag + ".tar.gz"
 
 def json_copy_release_info(json_file_path, temp1_file_path, temp2_file_path, SDK_info_array):
-    save_json_to_text(json_file_path, temp1_file_path, 13, 46)
+    save_json_to_text(json_file_path, temp1_file_path, 13, 51)
     replace_spaces_with_tabs_specific_lines(temp1_file_path, temp2_file_path, 1)
     replace_spaces_with_tabs_specific_lines(temp2_file_path, temp1_file_path, 1)
 
