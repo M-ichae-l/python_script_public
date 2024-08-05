@@ -393,10 +393,13 @@ def remove_file(remove_file_path):
 def main(input_1, input_2, input_3, input_4):
     print('......Running Python!!!')
 
-    # print(input_1) # input_1  E / R
+    # print(input_1) # input_1  E / R / ET
     # print(input_2) # input_2  release log path
     # print(input_3) # input_3  release commit log path
     # print(input_4) # input_4  last tag name
+
+    if input_1 == "ET" :
+        input_1 = "E"
 
     temp_release_commit_log_file_path = "./temp_release_commit_log.txt"
     temp_release_log_file_path =  "./temp_release_log.txt"

@@ -11,6 +11,8 @@ import json
 SDK_info_array = ["", "", "", "", "", "", ""]
 Package_name = ["TEMP.tar.gz", ""]
 
+insert_text_into_json_pram1_check = 0;
+
 def string_search_and_replace(text, substring, replacement, case_sensitive=True):
     """
     Searches for a substring in a string and replaces all occurrences with a replacement string.
@@ -242,6 +244,53 @@ def replace_line_data(input_file, output_file, target_line_number, new_data, mat
     except (IOError, ValueError) as e:
         print(f"Error: {e}")
 
+# get tool tag name
+def find_all_matches_and_extract_suffixes(folder_path, prefix, suffix):
+    matches = []
+    for root, dirs, files in os.walk(folder_path):
+        for file_name in files:
+            if file_name.startswith(prefix) and file_name.endswith(suffix):
+                # Extract part after prefix
+                result = file_name[len(prefix):]
+                # Remove suffix
+                if result.endswith(suffix):
+                    result = result[:-len(suffix)]
+                matches.append(result)
+    return matches
+
+# compare tool tag name, "A.B.C" or "A.B.C.D"
+def compare_and_keep_largest(data_list):
+    def parse_version(version):
+        return [int(part) for part in version.split('.')]
+
+    while len(data_list) > 1:
+        # Compare by each component
+        max_a = max(parse_version(v)[0] for v in data_list)
+        data_list = [v for v in data_list if parse_version(v)[0] == max_a]
+        
+        if len(data_list) == 1:
+            break
+        
+        max_b = max(parse_version(v)[1] for v in data_list)
+        data_list = [v for v in data_list if parse_version(v)[1] == max_b]
+        
+        if len(data_list) == 1:
+            break
+        
+        max_c = max(parse_version(v)[2] for v in data_list)
+        data_list = [v for v in data_list if parse_version(v)[2] == max_c]
+        
+        if len(data_list) == 1:
+            break
+        
+        if len(parse_version(data_list[0])) == 4:
+            max_d = max(parse_version(v)[3] for v in data_list if len(parse_version(v)) == 4)
+            data_list = [v for v in data_list if len(parse_version(v)) == 4 and parse_version(v)[3] == max_d]
+        
+        break
+
+    return data_list[0] if data_list else None
+
 def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
     SDK_repo = SDK_info_array[0]
     SDK_release_type = SDK_info_array[1]
@@ -253,6 +302,10 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
 #    print(http_raw)
 
     if SDK_release_type == "E":
+        today_date = time.strftime("%Y%m%d")
+        SDK_tag = SDK_tag + "-build" + today_date
+        SDK_Repo_branch = "dev"
+    elif SDK_release_type == "ET":
         today_date = time.strftime("%Y%m%d")
         SDK_tag = SDK_tag + "-build" + today_date
         SDK_Repo_branch = "dev"
@@ -269,12 +322,34 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
     # 4 9 10 11 12
     # 21 26
     # 31
+    temp_count = 0
 
     replace_line_data(temp1_file_path, temp2_file_path, 4, "          \"version\": \"" + SDK_tag + "\",")
+    temp_count = temp_count + 1
+
     replace_line_data(temp2_file_path, temp1_file_path, 9, "          \"url\": \"" +SDK_https_raw + SDK_Repo_branch + "/Arduino_package/release/" + SDK_repo + "-" + SDK_tag + ".tar.gz\",")
+    temp_count = temp_count + 1
+
     replace_line_data(temp1_file_path, temp2_file_path, 10, "          \"archiveFileName\": \"" + SDK_repo + "-" + SDK_tag + ".tar.gz\",")
+    temp_count = temp_count + 1
+
     replace_line_data(temp2_file_path, temp1_file_path, 11, "          \"checksum\": \"SHA-256:" + SDK_sha + "\",")
+    temp_count = temp_count + 1
+
     replace_line_data(temp1_file_path, temp2_file_path, 12, "          \"size\": \"" + SDK_size + "\",")
+    temp_count = temp_count + 1
+
+    if SDK_release_type == "ET":
+        temp_array = find_all_matches_and_extract_suffixes("./", "ameba_pro2_tools_windows-", ".tar.gz")
+        TOOL_tag = compare_and_keep_largest(temp_array)
+
+        replace_line_data(temp2_file_path, temp1_file_path, 31, "              \"version\": \"" + TOOL_tag + "\",")
+        temp_count = temp_count + 1
+
+    if temp_count % 2 == 0:
+        insert_text_into_json_pram1_check = 1
+    else
+        insert_text_into_json_pram1_check = 0
 
     Package_name[0] = "./Arduino_package/release/" + Package_name[0]
     Package_name[1] = "./Arduino_package/release/" + SDK_repo + "-" + SDK_tag + ".tar.gz"
@@ -286,7 +361,12 @@ def json_copy_release_info(json_file_path, temp1_file_path, temp2_file_path, SDK
 
     text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array)
 
-    insert_text_into_json(json_file_path, temp2_file_path, 13)
+    if insert_text_into_json_pram1_check == 0
+        insert_text_into_json(json_file_path, temp2_file_path, 13)
+    elif insert_text_into_json_pram1_check == 1
+        insert_text_into_json(json_file_path, temp1_file_path, 13)
+    else:
+        raise ValueError("no match insert_text_into_json_pram1_check")
 
 def remove_file(remove_file_path):
 #    if os.path.exists('./Arduino_package/temp.txt'):
@@ -313,15 +393,25 @@ def rename_file(old_path, new_path):
 def main(input_1, input_2, input_3, input_4, input_5, input_6, input_7):
     print('......Running Python!!!')
 
+    # print(input_1) # input_1  REPO_NAME
+    # print(input_2) # input_2  E / R / ET
+    # print(input_3) # input_3  LAST_TAG
+    # print(input_4) # input_4  PACKAGE_SHA
+    # print(input_5) # input_5  PACKAGE_SIZE
+    # print(input_6) # input_6  JSON_LINK_DEV / JSON_LINK_MAIN
+    # print(input_7) # input_7  RRLEASE_BRANCH_NAME
+
     if input_2 == "E":
         string_search_and_replace(input_6, "dev", "dev")
     elif input_2 == "R":
         string_search_and_replace(input_6, input_7, input_7)
+    elif input_2 == "ET":
+        string_search_and_replace(input_6, "dev", "dev")
     else:
         raise ValueError("no match branch")
 
     SDK_info_array[0] = input_1 # ameba_pro2
-    SDK_info_array[1] = input_2 # E
+    SDK_info_array[1] = input_2 # E / R / ET
 
     input_3 = update_tag(input_2, input_3)
     SDK_info_array[2] = input_3 # ${{ env.LAST_TAG }}
