@@ -348,7 +348,7 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
 
     if temp_count % 2 == 0:
         insert_text_into_json_pram1_check = 1
-    else
+    else:
         insert_text_into_json_pram1_check = 0
 
     Package_name[0] = "./Arduino_package/release/" + Package_name[0]
@@ -361,9 +361,9 @@ def json_copy_release_info(json_file_path, temp1_file_path, temp2_file_path, SDK
 
     text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array)
 
-    if insert_text_into_json_pram1_check == 0
+    if insert_text_into_json_pram1_check == 0:
         insert_text_into_json(json_file_path, temp2_file_path, 13)
-    elif insert_text_into_json_pram1_check == 1
+    elif insert_text_into_json_pram1_check == 1:
         insert_text_into_json(json_file_path, temp1_file_path, 13)
     else:
         raise ValueError("no match insert_text_into_json_pram1_check")
