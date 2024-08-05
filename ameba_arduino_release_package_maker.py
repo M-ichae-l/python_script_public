@@ -39,7 +39,7 @@ def string_search_and_replace(text, substring, replacement, case_sensitive=True)
     return new_text
 
 def update_tag(release_type, text, substring="QC", remove="-"):
-    if release_type == "E" or release_type == "R":
+    if release_type == "E" or release_type == "R" or release_type == "ET":
         if substring not in text:
             index = 5
             new_value = str(int(text[index]) + 1)
