@@ -11,8 +11,6 @@ import json
 SDK_info_array = ["", "", "", "", "", "", ""]
 Package_name = ["TEMP.tar.gz", ""]
 
-insert_text_into_json_pram1_check = 0;
-
 def string_search_and_replace(text, substring, replacement, case_sensitive=True):
     """
     Searches for a substring in a string and replaces all occurrences with a replacement string.
@@ -39,7 +37,7 @@ def string_search_and_replace(text, substring, replacement, case_sensitive=True)
     return new_text
 
 def update_tag(release_type, text, substring="QC", remove="-"):
-    if release_type == "E" or release_type == "R" or release_type == "ET":
+    if release_type == "E" or release_type == "R":
         if substring not in text:
             index = 5
             new_value = str(int(text[index]) + 1)
@@ -305,10 +303,6 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
         today_date = time.strftime("%Y%m%d")
         SDK_tag = SDK_tag + "-build" + today_date
         SDK_Repo_branch = "dev"
-    elif SDK_release_type == "ET":
-        today_date = time.strftime("%Y%m%d")
-        SDK_tag = SDK_tag + "-build" + today_date
-        SDK_Repo_branch = "dev"
     elif SDK_release_type == "R":
         if SDK_info_array[6] == "main":
             SDK_Repo_branch = "main"
@@ -322,34 +316,23 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
     # 4 9 10 11 12
     # 21 26
     # 31
-    temp_count = 0
 
     replace_line_data(temp1_file_path, temp2_file_path, 4, "          \"version\": \"" + SDK_tag + "\",")
-    temp_count = temp_count + 1
 
     replace_line_data(temp2_file_path, temp1_file_path, 9, "          \"url\": \"" +SDK_https_raw + SDK_Repo_branch + "/Arduino_package/release/" + SDK_repo + "-" + SDK_tag + ".tar.gz\",")
-    temp_count = temp_count + 1
 
     replace_line_data(temp1_file_path, temp2_file_path, 10, "          \"archiveFileName\": \"" + SDK_repo + "-" + SDK_tag + ".tar.gz\",")
-    temp_count = temp_count + 1
 
     replace_line_data(temp2_file_path, temp1_file_path, 11, "          \"checksum\": \"SHA-256:" + SDK_sha + "\",")
-    temp_count = temp_count + 1
 
     replace_line_data(temp1_file_path, temp2_file_path, 12, "          \"size\": \"" + SDK_size + "\",")
-    temp_count = temp_count + 1
 
-    if SDK_release_type == "ET":
-        temp_array = find_all_matches_and_extract_suffixes("./", "ameba_pro2_tools_windows-", ".tar.gz")
-        TOOL_tag = compare_and_keep_largest(temp_array)
+    temp_array = find_all_matches_and_extract_suffixes("./", "ameba_pro2_tools_windows-", ".tar.gz")
+    TOOL_tag = compare_and_keep_largest(temp_array)
+    replace_line_data(temp2_file_path, temp1_file_path, 31, "              \"version\": \"" + TOOL_tag + "\",")
 
-        replace_line_data(temp2_file_path, temp1_file_path, 31, "              \"version\": \"" + TOOL_tag + "\",")
-        temp_count = temp_count + 1
-
-    if temp_count % 2 == 0:
-        insert_text_into_json_pram1_check = 1
-    else:
-        insert_text_into_json_pram1_check = 0
+    # back to temp2
+    replace_line_data(temp1_file_path, temp2_file_path, 12, "          \"size\": \"" + SDK_size + "\",")
 
     Package_name[0] = "./Arduino_package/release/" + Package_name[0]
     Package_name[1] = "./Arduino_package/release/" + SDK_repo + "-" + SDK_tag + ".tar.gz"
@@ -360,13 +343,8 @@ def json_copy_release_info(json_file_path, temp1_file_path, temp2_file_path, SDK
     replace_spaces_with_tabs_specific_lines(temp2_file_path, temp1_file_path, 1)
 
     text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array)
+    insert_text_into_json(json_file_path, temp2_file_path, 13)
 
-    if insert_text_into_json_pram1_check == 0:
-        insert_text_into_json(json_file_path, temp2_file_path, 13)
-    elif insert_text_into_json_pram1_check == 1:
-        insert_text_into_json(json_file_path, temp1_file_path, 13)
-    else:
-        raise ValueError("no match insert_text_into_json_pram1_check")
 
 def remove_file(remove_file_path):
 #    if os.path.exists('./Arduino_package/temp.txt'):
@@ -394,7 +372,7 @@ def main(input_1, input_2, input_3, input_4, input_5, input_6, input_7):
     print('......Running Python!!!')
 
     # print(input_1) # input_1  REPO_NAME
-    # print(input_2) # input_2  E / R / ET
+    # print(input_2) # input_2  E / R
     # print(input_3) # input_3  LAST_TAG
     # print(input_4) # input_4  PACKAGE_SHA
     # print(input_5) # input_5  PACKAGE_SIZE
@@ -405,13 +383,11 @@ def main(input_1, input_2, input_3, input_4, input_5, input_6, input_7):
         string_search_and_replace(input_6, "dev", "dev")
     elif input_2 == "R":
         string_search_and_replace(input_6, input_7, input_7)
-    elif input_2 == "ET":
-        string_search_and_replace(input_6, "dev", "dev")
     else:
         raise ValueError("no match branch")
 
     SDK_info_array[0] = input_1 # ameba_pro2
-    SDK_info_array[1] = input_2 # E / R / ET
+    SDK_info_array[1] = input_2 # E / R
 
     input_3 = update_tag(input_2, input_3)
     SDK_info_array[2] = input_3 # ${{ env.LAST_TAG }}
