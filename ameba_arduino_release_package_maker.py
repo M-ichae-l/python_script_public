@@ -316,6 +316,7 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
     # 4 9 10 11 12
     # 21 26
     # 31
+    # 36 
 
     replace_line_data(temp1_file_path, temp2_file_path, 4, "          \"version\": \"" + SDK_tag + "\",")
 
@@ -329,7 +330,7 @@ def text_update_release_info(temp1_file_path, temp2_file_path, SDK_info_array):
 
     temp_array = find_all_matches_and_extract_suffixes("./", "ameba_pro2_tools_windows-", ".tar.gz")
     TOOL_tag = compare_and_keep_largest(temp_array)
-    replace_line_data(temp2_file_path, temp1_file_path, 31, "              \"version\": \"" + TOOL_tag + "\",")
+    replace_line_data(temp2_file_path, temp1_file_path, 31, "              \"version\": \"" + TOOL_tag + "\"")
 
     # back to temp2
     replace_line_data(temp1_file_path, temp2_file_path, 12, "          \"size\": \"" + SDK_size + "\",")
